@@ -2,7 +2,7 @@ import { ApiResponse } from '@elastic/elasticsearch'
 import { bulkAdd, bulkDelete } from './bulking'
 import Generator from './mapping'
 import { IndexMethodOptions, MongoosasticDocument, MongoosasticModel } from './types'
-import { deleteById, getIndexName, serialize } from './utils'
+import { deleteById, getIndexName, bodyTransform } from './utils'
 
 const generator = new Generator()
 
@@ -22,24 +22,17 @@ export async function index(
 
   const indexName = inOpts.index ? inOpts.index : getIndexName(this)
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  const mapping = generator.generateMapping(this.schema, true)
+  const body = await bodyTransform(generator, this)
 
-  let body
-  if (options.customSerialize) {
-    body = options.customSerialize(this, mapping)
-  } else {
-    body = serialize(this, mapping)
-  }
+  let _id = this._id.toString()
 
-  if (options.transform) {
-    body = await options.transform(body, this)
+  if (options.idMapper) {
+    _id = options.idMapper(body, this)
   }
 
   const opt = {
     index: indexName,
-    id: this._id.toString(),
+    id: _id,
     body: body,
     bulk: options.bulk,
     refresh: options.forceIndexRefresh,
@@ -62,11 +55,19 @@ export async function unIndex(this: MongoosasticDocument): Promise<MongoosasticD
 
   const indexName = getIndexName(this)
 
+  const body = await bodyTransform(generator, this)
+
+  let _id = this._id.toString()
+
+  if (options.idMapper) {
+    _id = options.idMapper(body, this)
+  }
+
   const opt = {
     client: client,
     index: indexName,
     tries: 3,
-    id: this._id.toString(),
+    id: _id,
     bulk: options.bulk,
     model: this.constructor as MongoosasticModel<MongoosasticDocument>,
     routing: options.routing ? options.routing(this) : undefined,

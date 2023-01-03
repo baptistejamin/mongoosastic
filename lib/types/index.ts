@@ -29,6 +29,11 @@ declare interface RoutingFn {
   (doc: Document): any;
 }
 
+declare interface IdMapperFn<T = any> {
+  (body: Record<string, unknown>, doc: HydratedDocument<T>): string;
+}
+
+
 declare interface GeneratedMapping extends MappingTypeMapping {
   cast?(doc: any): any;
 }
@@ -117,6 +122,7 @@ declare type Options = {
   routing?: RoutingFn;
   saveOnSynchronize?: boolean;
   transform?: TransformFn;
+  idMapper?: IdMapperFn;
 };
 
 declare type EsSearchOptions = {

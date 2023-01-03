@@ -10,6 +10,8 @@ import {
   MongoosasticModel,
 } from './types'
 
+import Generator from './mapping'
+
 export function isString(subject: unknown): boolean {
   return typeof subject === 'string'
 }
@@ -43,6 +45,26 @@ export function filterMappingFromMixed(props: Record<PropertyName, MappingProper
     }
   })
   return filteredMapping
+}
+
+export async function bodyTransform(generator: Generator, object: MongoosasticDocument) {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  const mapping = generator.generateMapping(object.schema, true)
+  const options = object.esOptions()
+
+  let body
+  if (options.customSerialize) {
+    body = options.customSerialize(object, mapping)
+  } else {
+    body = serialize(object, mapping)
+  }
+
+  if (options.transform) {
+    body = await options.transform(body, object)
+  }
+
+  return body
 }
 
 export function serialize<T extends MongoosasticDocument>(model: T, mapping: GeneratedMapping): T | T[] | string {
