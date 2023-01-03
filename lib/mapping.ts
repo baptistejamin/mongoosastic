@@ -341,10 +341,10 @@ export default class Generator {
     // Use cached version if any
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    if (useCache && this.cache[schema]) {
+    if (useCache && this.cache[schema.$id]) {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      return this.cache[schema]
+      return this.cache[schema.$id]
     }
 
     const cleanTree = getCleanTree(schema['tree' as keyof Schema], schema.paths, '', true)
@@ -359,7 +359,7 @@ export default class Generator {
     if (useCache) {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      this.cache[schema] = _cachedMapping
+      this.cache[schema.$id] = _cachedMapping
     }
 
     return _cachedMapping

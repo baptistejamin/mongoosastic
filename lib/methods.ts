@@ -4,6 +4,8 @@ import Generator from './mapping'
 import { IndexMethodOptions, MongoosasticDocument, MongoosasticModel } from './types'
 import { deleteById, getIndexName, serialize } from './utils'
 
+const generator = new Generator()
+
 export async function index(
   this: MongoosasticDocument,
   inOpts: IndexMethodOptions = {}
@@ -20,10 +22,9 @@ export async function index(
 
   const indexName = inOpts.index ? inOpts.index : getIndexName(this)
 
-  const generator = new Generator()
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
-  const mapping = generator.generateMapping(this.schema)
+  const mapping = generator.generateMapping(this.schema, true)
 
   let body
   if (options.customSerialize) {
