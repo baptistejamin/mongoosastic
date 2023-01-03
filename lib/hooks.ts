@@ -41,3 +41,9 @@ export function postRemove(doc: MongoosasticDocument): void {
 
   doc.unIndex()
 }
+
+export function postUpdate(doc: MongoosasticDocument): void {
+  if (!doc) {
+    return
+  }
+}

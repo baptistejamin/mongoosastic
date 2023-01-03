@@ -2,7 +2,7 @@ import events from 'events'
 import { Schema } from 'mongoose'
 import { flush } from './bulking'
 import { createEsClient } from './esClient'
-import { postRemove, postSave } from './hooks'
+import { postRemove, postSave, postUpdate } from './hooks'
 import Generator from './mapping'
 import { index, unIndex } from './methods'
 import { esSearch, search } from './search'
@@ -71,6 +71,8 @@ function mongoosastic(
 
     schema.post('remove', postRemove)
     schema.post(['findOneAndDelete', 'findOneAndRemove'], postRemove)
+
+    schema.post('update', postUpdate)
   }
 }
 
