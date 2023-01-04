@@ -72,7 +72,9 @@ function mongoosastic(
     schema.post('remove', postRemove)
     schema.post(['findOneAndDelete', 'findOneAndRemove'], postRemove)
 
-    schema.post('update', postUpdate)
+    schema.post('update', function(doc) {
+      postUpdate(this, doc, schema)
+    })
   }
 }
 

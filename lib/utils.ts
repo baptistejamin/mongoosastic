@@ -11,6 +11,7 @@ import {
 } from './types'
 
 import Generator from './mapping'
+import painlessFields from '@shelf/es-painless-fields'
 
 export function isString(subject: unknown): boolean {
   return typeof subject === 'string'
@@ -208,4 +209,28 @@ export async function hydrate(
   clonedRes.body.hits = results
 
   return clonedRes
+}
+
+export function mongoSetToScript($set: Record<string, unknown>) : Record<string, any> {
+  return painlessFields.set($set)
+}
+
+export function mongoConditionToQuery($condition: Record<string, unknown>) : object {
+  const filter = []
+
+  for (const key in $condition) {
+    const term : Record<string, unknown> = {}
+
+    term[key as keyof typeof $condition] = $condition[key as keyof typeof $condition]
+
+    filter.push({
+      term: term
+    })
+  }
+
+  return {
+    bool : {
+      filter : filter
+    }
+  }
 }

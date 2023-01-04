@@ -1,10 +1,6 @@
-/*
-
-import mongoose, { Schema } from 'mongoose'
-import mongoosastic from '../lib/index'
-import { MongoosasticDocument, MongoosasticModel } from '../lib/types'
+import mongoose from 'mongoose'
 import { config } from './config'
-import { ITweet, Tweet } from './models/tweet'
+import { Tweet } from './models/tweet'
 
 const esClient = config.getClient()
 
@@ -34,6 +30,7 @@ describe('updates', function () {
         message: 'Hello folks',
         post_date: new Date()
       })
+      await config.sleep(config.INDEXING_TIMEOUT)
     })
 
     afterAll(async function () {
@@ -47,6 +44,8 @@ describe('updates', function () {
         message: 'Hello world'
       })
 
+      await config.sleep(config.INDEXING_TIMEOUT)
+
       const mongoTweet = await Tweet.findOne({
         userId: 2
       })
@@ -54,10 +53,10 @@ describe('updates', function () {
       const esTweet = await Tweet.search({
         match: {
           userId:2
-         }
+        }
       })
 
       expect(esTweet?.body.hits.hits[0]._source?.message).toEqual(mongoTweet?.message)
     })
   })
-})*/
+})

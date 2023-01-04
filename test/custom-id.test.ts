@@ -20,7 +20,7 @@ const ContactSchema = new Schema({
 })
 
 ContactSchema.plugin(mongoosastic, {
-  idMapper: function (data: Record<string, unknown>, contact: IContact) {
+  idMapper: function (data: Record<string, unknown>) {
     return `${data.tenantId}_${data.email}`
   }
 })
@@ -53,6 +53,6 @@ describe('Custom ID Mode', function () {
       }
     })
 
-    expect(results?.body.hits.hits[0]._id).toEqual("A_john.doe@gmail.com")
+    expect(results?.body.hits.hits[0]._id).toEqual('A_john.doe@gmail.com')
   })
 })

@@ -1,4 +1,6 @@
 import { MongoosasticDocument } from './types'
+import { flatten } from 'flat'
+import { mongoSetToScript, mongoConditionToQuery } from './utils'
 
 export async function postSave(doc: MongoosasticDocument): Promise<void> {
   if (!doc) {
@@ -42,8 +44,25 @@ export function postRemove(doc: MongoosasticDocument): void {
   doc.unIndex()
 }
 
-export function postUpdate(doc: MongoosasticDocument): void {
-  if (!doc) {
-    return
-  }
+export function postUpdate(query: any, doc: MongoosasticDocument, schema: any ): void {
+  const conditions = query._conditions
+  const update = query._update
+  const client = schema.statics.esClient()
+  const options = schema.statics.esOptions() || {}
+  const indexName = options.index || query._collection.collection.collectionName
+
+  const $query = flatten(conditions || {})
+  const $set = flatten(update.$set || {})
+
+  const script = mongoSetToScript($set as Record<string, unknown>)
+  const esQuery = mongoConditionToQuery($query as Record<string, unknown>)
+
+  client.updateByQuery({
+    index: indexName,
+    body: {
+      query: esQuery,
+      script: script,
+      conflicts: 'proceed'
+    }
+  })
 }
