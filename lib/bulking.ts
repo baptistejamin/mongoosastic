@@ -29,6 +29,20 @@ export async function bulkAdd(opts: BulkIndexOptions): Promise<void> {
   await bulkIndex(opts.model, instruction, opts.bulk as BulkOptions)
 }
 
+export async function bulkUpdate(opts: BulkIndexOptions): Promise<void> {
+  const instruction = [
+    {
+      update: {
+        _index: opts.index,
+        _id: opts.id,
+      },
+    },
+    opts.body,
+  ]
+
+  await bulkIndex(opts.model, instruction, opts.bulk as BulkOptions)
+}
+
 export async function bulkDelete(opts: BulkUnIndexOptions): Promise<void> {
   const instruction = [
     {
@@ -69,6 +83,7 @@ export async function flush(this: MongoosasticModel<MongoosasticDocument>): Prom
       if (res.body.items && res.body.items.length) {
         for (let i = 0; i < res.body.items.length; i++) {
           const info = res.body.items[i]
+
           if (info && info.index && info.index.error) {
             this.bulkError().emit('error', null, info.index)
           }

@@ -1,5 +1,6 @@
 import { MongoosasticDocument } from './types'
-import { flatten } from 'flat'
+import { flatten, unflatten } from 'flat'
+import { bulkUpdate } from './bulking'
 import { mongoSetToScript, mongoConditionToQuery } from './utils'
 
 export async function postSave(doc: MongoosasticDocument): Promise<void> {
@@ -52,17 +53,30 @@ export function postUpdate(query: any, doc: MongoosasticDocument, schema: any ):
   const indexName = options.index || query._collection.collection.collectionName
 
   const $query = flatten(conditions || {})
-  const $set = flatten(update.$set || {})
+  const $set = unflatten(update.$set)
 
   const script = mongoSetToScript($set as Record<string, unknown>)
   const esQuery = mongoConditionToQuery($query as Record<string, unknown>)
 
-  client.updateByQuery({
-    index: indexName,
-    body: {
-      query: esQuery,
-      script: script,
-      conflicts: 'proceed'
+  if (options.bulk && options.idMapper) {
+    const opt = {
+      index: indexName,
+      id: options.idMapper(unflatten(conditions)),
+      body: {
+        script: script
+      },
+      bulk: options.bulk
     }
-  })
+
+    bulkUpdate({ model: query.model, ...opt })
+  } else {
+    client.updateByQuery({
+      index: indexName,
+      body: {
+        query: esQuery,
+        script: script,
+        conflicts: 'proceed'
+      }
+    })
+  }
 }

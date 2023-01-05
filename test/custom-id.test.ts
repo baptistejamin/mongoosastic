@@ -4,9 +4,8 @@ import { MongoosasticDocument, MongoosasticModel } from '../lib/types'
 import { config } from './config'
 
 interface IContact extends MongoosasticDocument {
-  name: string,
-  settingLicense: string,
-  detectedLicense: string,
+  tenantId: string,
+  email: string
 }
 
 // -- Only index specific field

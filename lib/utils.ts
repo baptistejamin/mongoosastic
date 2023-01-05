@@ -212,7 +212,7 @@ export async function hydrate(
 }
 
 export function mongoSetToScript($set: Record<string, unknown>) : Record<string, any> {
-  return painlessFields.set($set)
+  return painlessFields.setNotFlattened($set, true)
 }
 
 export function mongoConditionToQuery($condition: Record<string, unknown>) : object {
