@@ -4,7 +4,6 @@ import mongoosastic from '../lib/index'
 import { Tweet } from './models/tweet'
 
 import { MongoosasticDocument, MongoosasticModel } from '../lib/types'
-const esClient = config.getClient()
 
 interface IMessage extends MongoosasticDocument {
   tenantId: string,
@@ -91,108 +90,96 @@ const MessageWithMeta = mongoose.model<IMessageWithMeta, MongoosasticModel<IMess
 
 // -- alright let's test this shiznit!
 describe('updates', function () {
+  beforeAll(async function () {
+    await mongoose.connect(config.mongoUrl)
 
-  beforeAll(function () {
-    mongoose.connect(config.mongoUrl, config.mongoOpts, async function () {
-      await config.deleteDocs([Tweet, Message])
-      await config.deleteIndexIfExists(['tweets', 'messages'])
+    await config.deleteDocs([Message])
+    await config.deleteIndexIfExists(['messages'])
+
+    await config.createModelAndEnsureIndex(Tweet, {
+      user: 'john',
+      userId: 2,
+      message: 'Hello folks',
+      post_date: new Date()
     })
+
+    await config.sleep(config.INDEXING_TIMEOUT)
   })
 
   afterAll(async function () {
-    await config.deleteDocs([Tweet, Message])
-    await config.deleteIndexIfExists(['tweets', 'messages'])
-
-    await mongoose.disconnect()
-    await esClient.close()
+    await config.deleteDocs([Message])
+    await config.deleteIndexIfExists(['messages'])
   })
 
-  describe('Creating Index', function () {
-    beforeAll(async function () {
-      await config.createModelAndEnsureIndex(Tweet, {
-        user: 'john',
-        userId: 2,
-        message: 'Hello folks',
-        post_date: new Date()
-      })
-      await config.sleep(config.INDEXING_TIMEOUT)
+  it('should be able to update', async function () {
+    await Tweet.updateOne({
+      userId: 2
+    }, {
+      message: 'Hello world'
     })
 
-    afterAll(async function () {
-      await config.deleteIndexIfExists(['tweets', 'messages'])
+    await config.sleep(config.INDEXING_TIMEOUT)
+
+    const mongoTweet = await Tweet.findOne({
+      userId: 2
     })
 
-    it('should be able to update', async function () {
-      await Tweet.update({
-        userId: 2
-      }, {
-        message: 'Hello world'
-      })
-
-      await config.sleep(config.INDEXING_TIMEOUT)
-
-      const mongoTweet = await Tweet.findOne({
-        userId: 2
-      })
-
-      const esTweet = await Tweet.search({
-        match: {
-          userId:2
-        }
-      })
-
-      expect(esTweet?.body.hits.hits[0]._source?.message).toEqual(mongoTweet?.message)
+    const esTweet = await Tweet.search({
+      match: {
+        userId:2
+      }
     })
 
-    it('multiple updates', async function () {
-      config.createModelAndEnsureIndex(Message, {
-        messageId: '1',
-        senderId: '1',
-        tenantId: 'a',
-        content: 'Hello world'
-      })
-     
+    expect(esTweet?.body.hits.hits[0]._source?.message).toEqual(mongoTweet?.message)
+  })
 
-      await config.sleep(config.BULK_ACTION_TIMEOUT)
-
-      await Message.update({
-        messageId: '1',
-        tenantId: 'a',
-      }, {
-        readAt: new Date()
-      })
-
-      await config.sleep(config.BULK_ACTION_TIMEOUT)
-
-      const esMessage = await Message.search({
-        match: {
-          messageId:1
-        }
-      })
-
-      expect(esMessage?.body.hits.hits[0]._source?.readAt).not.toEqual(null)
+  it('multiple updates', async function () {
+    config.createModelAndEnsureIndex(Message, {
+      messageId: '1',
+      senderId: '1',
+      tenantId: 'a',
+      content: 'Hello world'
     })
 
+    await config.sleep(config.INDEXING_TIMEOUT)
 
-    it('assert sub objects', async function () {
-      config.createModelAndEnsureIndex(MessageWithMeta, {
-        messageId: '2',
-        senderId: '2',
-        tenantId: 'b',
-        content: 'Hello world'
-      })
-
-      await config.sleep(config.BULK_ACTION_TIMEOUT)
-
-      await MessageWithMeta.update({
-        messageId: '2',
-        tenantId: 'b',
-      }, {
-        metadata : {
-          read: true
-        }
-      })
-
+    await Message.updateMany({
+      messageId: '1',
+      tenantId: 'a',
+    }, {
+      readAt: new Date()
     })
+
+    await config.sleep(config.INDEXING_TIMEOUT)
+
+    const esMessage = await Message.search({
+      match: {
+        messageId:1
+      }
+    })
+
+    expect(esMessage?.body.hits.hits[0]._source?.readAt).not.toEqual(null)
+  })
+
+
+  it('assert sub objects', async function () {
+    config.createModelAndEnsureIndex(MessageWithMeta, {
+      messageId: '2',
+      senderId: '2',
+      tenantId: 'b',
+      content: 'Hello world'
+    })
+
+    await config.sleep(config.BULK_ACTION_TIMEOUT)
+
+    await MessageWithMeta.update({
+      messageId: '2',
+      tenantId: 'b',
+    }, {
+      metadata : {
+        read: true
+      }
+    })
+
   })
 })

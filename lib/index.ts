@@ -3,7 +3,9 @@ import { Schema } from 'mongoose'
 import { flush } from './bulking'
 import { createEsClient } from './esClient'
 import { postRemove, postSave, postUpdate } from './hooks'
+
 import Generator from './mapping'
+
 import { index, unIndex } from './methods'
 import { esSearch, search } from './search'
 import { createMapping, esCount, esTruncate, refresh, synchronize } from './statics'
@@ -72,8 +74,8 @@ function mongoosastic(
     schema.post('remove', postRemove)
     schema.post(['findOneAndDelete', 'findOneAndRemove'], postRemove)
 
-    schema.post('update', function(doc) {
-      postUpdate(this, doc, schema)
+    schema.post(['update', 'updateOne', 'updateMany'], function(doc) {
+      return postUpdate(this, doc, options, client)
     })
   }
 }

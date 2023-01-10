@@ -15,7 +15,7 @@ import {
   SearchResponse,
 } from '@elastic/elasticsearch/api/types'
 import { EventEmitter } from 'events'
-import { Document, HydratedDocument, Model, PopulateOptions, QueryOptions } from 'mongoose'
+import { Document, HydratedDocument, Model, PopulateOptions, QueryOptions, Schema } from 'mongoose'
 
 declare interface FilterFn {
   (doc: Document): boolean;
@@ -30,7 +30,7 @@ declare interface RoutingFn {
 }
 
 declare interface IdMapperFn<T = any> {
-  (body: Record<string, unknown>, doc: HydratedDocument<T>): string;
+  (body: Record<string, unknown>, doc?: HydratedDocument<T>): string;
 }
 
 
@@ -45,6 +45,11 @@ declare interface HydratedSearchResults<TDocument = unknown> extends SearchRespo
 declare interface HydratedSearchHits<TDocument> extends SearchHitsMetadata<TDocument> {
   hydrated: Array<TDocument>;
 }
+
+declare interface SchemaWithInternals extends Schema {
+  $id: string;
+}
+
 
 declare type IndexInstruction = {
   index: {
@@ -193,4 +198,5 @@ export {
   MongoosasticModel,
   Options,
   SynchronizeOptions,
+  SchemaWithInternals
 }

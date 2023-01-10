@@ -5,15 +5,38 @@ import {
   BulkUnIndexOptions,
   MongoosasticDocument,
   MongoosasticModel,
+  SchemaWithInternals
 } from './types'
 
-let bulkBuffer: BulkInstruction[] = []
-let bulkTimeout: NodeJS.Timeout | undefined
+declare type BulkStoreValue = {
+  buffer:  BulkInstruction[],
+  timeout: NodeJS.Timeout | undefined
+};
 
-function clearBulkTimeout() {
-  clearTimeout(bulkTimeout as NodeJS.Timeout)
-  bulkTimeout = undefined
+const bulkStore: Map<string, BulkStoreValue> = new Map()
+
+function clearBulkTimeout(model: MongoosasticModel<MongoosasticDocument>) {
+  const store = getStore(model)
+
+  clearTimeout(store.timeout as NodeJS.Timeout)
+  store.timeout = undefined
 }
+
+function getStore(model: MongoosasticModel<MongoosasticDocument>) : BulkStoreValue {
+  const $id = (model.schema as SchemaWithInternals).$id
+
+  if (!bulkStore.has($id)) {
+    bulkStore.set($id, {
+      buffer: [],
+      timeout: undefined
+    } as BulkStoreValue)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-extra-non-null-assertion, @typescript-eslint/no-non-null-assertion
+  return bulkStore.get($id)!!
+}
+
+//let PARRALEL_REQUESTS = 0
 
 export async function bulkAdd(opts: BulkIndexOptions): Promise<void> {
   const instruction = [
@@ -61,36 +84,52 @@ export async function bulkIndex(
   instruction: BulkInstruction[],
   bulk: BulkOptions
 ): Promise<void> {
-  bulkBuffer = bulkBuffer.concat(instruction)
+  const store = getStore(model)
 
-  if (bulkBuffer.length >= bulk.size) {
+  store.buffer = store?.buffer.concat(instruction)
+
+  if (store.buffer.length >= bulk.size) {
     await model.flush()
-    clearBulkTimeout()
-  } else if (bulkTimeout === undefined) {
-    bulkTimeout = setTimeout(async () => {
+    clearBulkTimeout(model)
+  } else if (store.timeout === undefined) {
+    store.timeout = setTimeout(async () => {
       await model.flush()
-      clearBulkTimeout()
+      clearBulkTimeout(model)
     }, bulk.delay)
   }
 }
 
 export async function flush(this: MongoosasticModel<MongoosasticDocument>): Promise<void> {
+  const store = getStore(this)
+
   this.esClient()
     .bulk({
-      body: bulkBuffer,
+      body: store.buffer,
+      filter_path: 'took,items.**.error'
     })
     .then((res) => {
       if (res.body.items && res.body.items.length) {
         for (let i = 0; i < res.body.items.length; i++) {
           const info = res.body.items[i]
 
+          if (info && info.update && info.update.error) {
+            this.bulkError().emit('error', null, info.update)
+          }
+
           if (info && info.index && info.index.error) {
+            this.bulkError().emit('error', null, info.index)
+          }
+
+          if (info && info.delete && info.delete.error) {
             this.bulkError().emit('error', null, info.index)
           }
         }
       }
     })
-    .catch((error) => this.bulkError().emit('error', error, null))
+    .catch((error) => {
+      this.bulkError().emit('error', error, null)
+    })
+    
 
-  bulkBuffer = []
+  store.buffer = []
 }

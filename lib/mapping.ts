@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { cloneDeep } from 'lodash'
 import { Schema } from 'mongoose'
-import { MongoosasticDocument, MongoosasticModel } from './types'
+import { MongoosasticDocument, MongoosasticModel, SchemaWithInternals } from './types'
 
 //
 // Get type from the mongoose schema
@@ -335,16 +335,15 @@ function nestedSchema(
 }
 
 export default class Generator {
-  cache: Record<string, Record<string, any>> = {}
+  cache: Map<string, Record<string, any>> = new Map()
 
   generateMapping(schema: Schema<MongoosasticDocument, MongoosasticModel<MongoosasticDocument>>, useCache?: boolean): Record<string, any> {
+    const schemaWithInternals = schema as SchemaWithInternals
+
     // Use cached version if any
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    if (useCache && this.cache[schema.$id]) {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      return this.cache[schema.$id]
+    if (useCache && this.cache.has(schemaWithInternals.$id)) {
+      // eslint-disable-next-line @typescript-eslint/no-extra-non-null-assertion, @typescript-eslint/no-non-null-assertion
+      return this.cache.get(schemaWithInternals.$id)!!
     }
 
     const cleanTree = getCleanTree(schema['tree' as keyof Schema], schema.paths, '', true)
@@ -357,9 +356,7 @@ export default class Generator {
     const _cachedMapping = { properties: mapping }
 
     if (useCache) {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      this.cache[schema.$id] = _cachedMapping
+      this.cache.set(schemaWithInternals.$id, _cachedMapping)
     }
 
     return _cachedMapping

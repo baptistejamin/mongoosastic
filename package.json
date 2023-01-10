@@ -21,7 +21,7 @@
     "lodash": "4.17.21",
     "mongoose": "6.0.13",
     "flat": "5.0.2",
-    "@shelf/es-painless-fields": "1.0.0"
+    "@shelf/es-painless-fields": "2.1.1"
   },
   "devDependencies": {
     "@types/jest": "27.0.2",

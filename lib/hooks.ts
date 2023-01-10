@@ -1,4 +1,6 @@
-import { MongoosasticDocument } from './types'
+import { Client } from '@elastic/elasticsearch'
+import { Query, UpdateQuery } from 'mongoose'
+import { MongoosasticDocument, MongoosasticModel, Options } from './types'
 import { flatten, unflatten } from 'flat'
 import { bulkUpdate } from './bulking'
 import { mongoSetToScript, mongoConditionToQuery } from './utils'
@@ -45,12 +47,12 @@ export function postRemove(doc: MongoosasticDocument): void {
   doc.unIndex()
 }
 
-export function postUpdate(query: any, doc: MongoosasticDocument, schema: any ): void {
-  const conditions = query._conditions
-  const update = query._update
-  const client = schema.statics.esClient()
-  const options = schema.statics.esOptions() || {}
-  const indexName = options.index || query._collection.collection.collectionName
+export function postUpdate(query: Query<unknown, unknown>, doc: MongoosasticDocument, options: Options, client: Client): void {
+  const conditions = query.getFilter()
+
+  const update =  query.getUpdate() as UpdateQuery<unknown>
+
+  const indexName = options.index || query.model.collection.collectionName
 
   const $query = flatten(conditions || {})
   const $set = unflatten(update.$set)
@@ -68,7 +70,7 @@ export function postUpdate(query: any, doc: MongoosasticDocument, schema: any ):
       bulk: options.bulk
     }
 
-    bulkUpdate({ model: query.model, ...opt })
+    bulkUpdate({ model: query.model as MongoosasticModel<MongoosasticDocument>, ...opt })
   } else {
     client.updateByQuery({
       index: indexName,

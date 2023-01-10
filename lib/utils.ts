@@ -211,7 +211,7 @@ export async function hydrate(
   return clonedRes
 }
 
-export function mongoSetToScript($set: Record<string, unknown>) : Record<string, any> {
+export function mongoSetToScript($set: Record<string, unknown>) : Record<string, unknown> {
   return painlessFields.setNotFlattened($set, true)
 }
 
