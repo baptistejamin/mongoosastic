@@ -109,6 +109,7 @@ describe('updates', function () {
   afterAll(async function () {
     await config.deleteDocs([Message])
     await config.deleteIndexIfExists(['messages'])
+    await mongoose.disconnect()
   })
 
   it('should be able to update', async function () {
