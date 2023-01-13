@@ -30,7 +30,7 @@ declare interface RoutingFn {
 }
 
 declare interface IdMapperFn<T = any> {
-  (body: Record<string, unknown>, doc?: HydratedDocument<T>): string;
+  (body: Record<string, unknown>, doc?: HydratedDocument<T>): string | null;
 }
 
 

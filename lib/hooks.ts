@@ -3,7 +3,7 @@ import { Query, UpdateQuery } from 'mongoose'
 import { MongoosasticDocument, MongoosasticModel, Options } from './types'
 import { flatten, unflatten } from 'flat'
 import { bulkUpdate } from './bulking'
-import { mongoSetToScript, mongoConditionToQuery } from './utils'
+import { mongoSetToScript, mongoConditionToQuery, shouldUsePrimaryKey } from './utils'
 
 export async function postSave(doc: MongoosasticDocument): Promise<void> {
   if (!doc) {
@@ -60,10 +60,24 @@ export function postUpdate(query: Query<unknown, unknown>, doc: MongoosasticDocu
   const script = mongoSetToScript($set as Record<string, unknown>)
   const esQuery = mongoConditionToQuery($query as Record<string, unknown>)
 
-  if (options.bulk && options.idMapper) {
+  let _id =  conditions['_id']
+
+  if (!_id && options.idMapper) {
+    _id = options.idMapper(unflatten(conditions))
+  }
+
+  // $addToSet ($each) TODO
+  // $push : TODO
+  // $unset : TODO
+  // test with upsert // $setOnInsert
+  // $exists (with lt, gt, etc?), $ne, $or : YES
+
+  // Extra conditions on query
+
+  if (options.bulk && shouldUsePrimaryKey(conditions) && _id) {
     const opt = {
       index: indexName,
-      id: options.idMapper(unflatten(conditions)),
+      id: _id,
       body: {
         script: script
       },

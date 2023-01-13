@@ -129,7 +129,6 @@ export async function flush(this: MongoosasticModel<MongoosasticDocument>): Prom
     .catch((error) => {
       this.bulkError().emit('error', error, null)
     })
-    
 
   store.buffer = []
 }

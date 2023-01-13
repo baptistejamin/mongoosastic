@@ -215,22 +215,145 @@ export function mongoSetToScript($set: Record<string, unknown>) : Record<string,
   return painlessFields.setNotFlattened($set, true)
 }
 
+export function mongoUnsetToScript($set: Record<string, unknown>) : Record<string, unknown> {
+  return painlessFields.setNotFlattened($set, true)
+}
+
 export function mongoConditionToQuery($condition: Record<string, unknown>) : object {
   const filter = []
+  const must_not = []
+  const bool : Record<string, unknown> = {}
 
+  // Compare all condition items \
+  // Conditions will be added in two stages :
+  //   filter   : Where all positive matches will be added
+  //   must_not : Where all negate matches will be added
   for (const key in $condition) {
-    const term : Record<string, unknown> = {}
+    const currentKey = key as keyof typeof $condition
+    const currentCondition = $condition[currentKey] as Record<string, unknown>
 
-    term[key as keyof typeof $condition] = $condition[key as keyof typeof $condition]
+    let innerOperator = false
 
-    filter.push({
-      term: term
-    })
+    if (currentCondition['$in']) {
+      const terms : Record<string, unknown> = {}
+      terms[currentKey] = currentCondition['$in']
+
+      filter.push({
+        terms: terms
+      })
+
+      innerOperator = true
+    }
+
+    if (currentCondition['$exists']) {
+      const exists : Record<string, unknown> = {}
+      exists["field"] = currentCondition['$exists']
+
+      filter.push({
+        exists: exists
+      })
+
+      innerOperator = true
+    }
+
+    if (currentCondition['$nin']) {
+      const terms : Record<string, unknown> = {}
+      terms[currentKey] = currentCondition['$nin']
+
+      must_not.push({
+        terms: terms
+      })
+
+      innerOperator = true
+    }
+
+    if (currentCondition['$gte'] || currentCondition['$gt'] || currentCondition['$lt']  || currentCondition['$lte']) {
+      const range : Record<string, unknown> = {}
+
+      if (currentCondition['$gte']) {
+        range['gte'] = currentCondition['$gte']
+      }
+
+      if (currentCondition['$gt']) {
+        range['gt'] =currentCondition['$gt']
+      }
+
+      if (currentCondition['$lte']) {
+        range['lte'] = currentCondition['$lte']
+      }
+
+      if (currentCondition['$lt']) {
+        range['lt'] = currentCondition['$lt']
+      }
+
+      filter.push({
+        range: range
+      })
+
+      innerOperator = true
+    }
+
+    if (currentCondition['$ne']) {
+      const term : Record<string, unknown> = {}
+      term[currentKey] = currentCondition['$ne']
+
+      must_not.push({
+        term: term
+      })
+
+      innerOperator = true
+    }
+
+    if (currentCondition['$eq']) {
+      const term : Record<string, unknown> = {}
+      term[currentKey] = currentCondition['$eq']
+
+      filter.push({
+        term: term
+      })
+
+      innerOperator = true
+    }
+
+    if (innerOperator === false) {
+      const term : Record<string, unknown> = {}
+      term[currentKey] = currentCondition
+
+      filter.push({
+        term: term
+      })
+    }
+  }
+
+  if (must_not.length > 0) {
+    bool['must_not'] = must_not
+  }
+
+  if (filter.length > 0) {
+    bool['filter'] = filter
   }
 
   return {
-    bool : {
-      filter : filter
+    bool
+  }
+}
+
+export function shouldUsePrimaryKey($condition: Record<string, unknown>) : boolean {
+  let canUsePrimaryKey = true
+
+  for (const key in $condition) {
+    const currentKey = key as keyof typeof $condition
+    const currentCondition = $condition[currentKey] as Record<string, unknown>
+
+    if (currentCondition['$ne'] ||
+        currentCondition['$nin'] ||
+        currentCondition['$lte'] ||
+        currentCondition['$lt'] ||
+        currentCondition['$gte'] ||
+        currentCondition['$gt']) {
+      canUsePrimaryKey = false
     }
   }
+
+  return canUsePrimaryKey
 }

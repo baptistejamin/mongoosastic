@@ -2,6 +2,9 @@ import mongoose, { Schema } from 'mongoose'
 import { config } from './config'
 import mongoosastic from '../lib/index'
 import { Tweet } from './models/tweet'
+import { mongoConditionToQuery } from '../lib/utils'
+
+import ConversionGenerator from '../lib/conversions/builder'
 
 import { MongoosasticDocument, MongoosasticModel } from '../lib/types'
 
@@ -127,7 +130,7 @@ describe('updates', function () {
 
     const esTweet = await Tweet.search({
       match: {
-        userId:2
+        userId: 2
       }
     })
 
@@ -182,5 +185,189 @@ describe('updates', function () {
       }
     })
 
+    await config.sleep(config.BULK_ACTION_TIMEOUT)
+
+    const esMessage = await Message.search({
+      match: {
+        messageId:1
+      }
+    })
+
+    expect(esMessage?.body.hits.hits[0]._source?.readAt).not.toEqual(null)
+  })
+})
+
+describe('mongo to elastic queries', function() {
+  it('simple $in query', function() {
+    const _query = mongoConditionToQuery({
+      article_id : {
+        $in : ['a', 'b', 'c']
+      }
+    })
+
+    expect(_query).toEqual({
+      bool:{
+        filter:[{
+          terms:{
+            article_id:[
+              'a','b','c'
+            ]
+          }
+        }
+        ]
+      }})
+  })
+
+  it('$in with $nin', function() {
+    const _query = mongoConditionToQuery({
+      article_id : {
+        $in : ['a', 'b', 'c'],
+        $nin : ['c']
+      }
+    })
+
+    expect(_query).toEqual({
+      bool:{
+        filter:[{
+          terms:{
+            article_id:[
+              'a','b','c'
+            ]
+          }
+        }],
+        must_not: [{
+          terms:{
+            article_id:[
+              'c'
+            ]
+          }
+        }]
+      }})
+  })
+
+  it('range', function() {
+    const _query = mongoConditionToQuery({
+      view_count : {
+        $lte : 1000,
+        $gte : 100
+      }
+    })
+
+    expect(_query).toEqual({
+      bool:{
+        filter:[{
+          range:{
+            gte:100,
+            lte:1000
+          }
+        }]
+      }
+    })
+  })
+
+  it('$ne filter', function() {
+    const _query = mongoConditionToQuery({
+      article_id : {
+        $ne : 'd'
+      }
+    })
+
+    expect(_query).toEqual({
+      bool:{
+        must_not:[{
+          term: {
+            article_id: 'd'
+          }
+        }]
+      }
+    })
+  })
+})
+
+
+describe('mongo to elastic updates', function() {
+  it('simple $set', function() {
+    const _query = mongoConditionToQuery({
+      article_id : {
+        $in : ['a', 'b', 'c']
+      }
+    })
+
+    expect(_query).toEqual({
+      bool:{
+        filter:[{
+          terms:{
+            article_id:[
+              'a','b','c'
+            ]
+          }
+        }
+        ]
+      }})
+  })
+
+  it('$in with $nin', function() {
+    const _query = mongoConditionToQuery({
+      article_id : {
+        $in : ['a', 'b', 'c'],
+        $nin : ['c']
+      }
+    })
+
+    expect(_query).toEqual({
+      bool:{
+        filter:[{
+          terms:{
+            article_id:[
+              'a','b','c'
+            ]
+          }
+        }],
+        must_not: [{
+          terms:{
+            article_id:[
+              'c'
+            ]
+          }
+        }]
+      }})
+  })
+
+  it('range', function() {
+    const _query = mongoConditionToQuery({
+      view_count : {
+        $lte : 1000,
+        $gte : 100
+      }
+    })
+
+    expect(_query).toEqual({
+      bool:{
+        filter:[{
+          range:{
+            gte:100,
+            lte:1000
+          }
+        }]
+      }
+    })
+  })
+
+  it('$ne filter', function() {
+    const _query = mongoConditionToQuery({
+      article_id : {
+        $ne : 'd'
+      }
+    })
+
+    expect(_query).toEqual({
+      bool:{
+        must_not:[{
+          term: {
+            article_id: 'd'
+          }
+        }]
+      }
+    })
   })
 })
