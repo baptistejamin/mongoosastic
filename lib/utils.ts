@@ -247,7 +247,7 @@ export function mongoConditionToQuery($condition: Record<string, unknown>) : obj
 
     if (currentCondition['$exists']) {
       const exists : Record<string, unknown> = {}
-      exists["field"] = currentCondition['$exists']
+      exists['field'] = currentCondition['$exists']
 
       filter.push({
         exists: exists

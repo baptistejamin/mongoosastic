@@ -18,16 +18,18 @@
   "types": "index.d.ts",
   "dependencies": {
     "@elastic/elasticsearch": "7.15.0",
+    "@shelf/es-painless-fields": "2.1.1",
+    "flat": "5.0.2",
     "lodash": "4.17.21",
     "mongoose": "6.0.13",
-    "flat": "5.0.2",
-    "@shelf/es-painless-fields": "2.1.1"
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@types/flat": "5.0.2",
     "@types/jest": "27.0.2",
     "@types/lodash": "4.14.176",
     "@types/node": "16.11.7",
-    "@types/flat": "5.0.2",
+    "@types/uuid": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "5.3.1",
     "@typescript-eslint/parser": "5.3.1",
     "coveralls": "3.1.1",

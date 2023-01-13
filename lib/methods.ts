@@ -2,7 +2,7 @@ import { ApiResponse } from '@elastic/elasticsearch'
 import { bulkAdd, bulkDelete } from './bulking'
 import Generator from './mapping'
 import { IndexMethodOptions, MongoosasticDocument, MongoosasticModel } from './types'
-import { deleteById, getIndexName, bodyTransform, shouldUsePrimaryKey } from './utils'
+import { deleteById, getIndexName, bodyTransform } from './utils'
 
 const generator = new Generator()
 

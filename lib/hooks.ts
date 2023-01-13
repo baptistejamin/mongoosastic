@@ -3,7 +3,8 @@ import { Query, UpdateQuery } from 'mongoose'
 import { MongoosasticDocument, MongoosasticModel, Options } from './types'
 import { flatten, unflatten } from 'flat'
 import { bulkUpdate } from './bulking'
-import { mongoSetToScript, mongoConditionToQuery, shouldUsePrimaryKey } from './utils'
+import { mongoConditionToQuery, shouldUsePrimaryKey } from './utils'
+import ConversionGenerator from './conversions/builder'
 
 export async function postSave(doc: MongoosasticDocument): Promise<void> {
   if (!doc) {
@@ -48,6 +49,8 @@ export function postRemove(doc: MongoosasticDocument): void {
 }
 
 export function postUpdate(query: Query<unknown, unknown>, doc: MongoosasticDocument, options: Options, client: Client): void {
+  const generator = new ConversionGenerator()
+
   const conditions = query.getFilter()
 
   const update =  query.getUpdate() as UpdateQuery<unknown>
@@ -55,9 +58,13 @@ export function postUpdate(query: Query<unknown, unknown>, doc: MongoosasticDocu
   const indexName = options.index || query.model.collection.collectionName
 
   const $query = flatten(conditions || {})
-  const $set = unflatten(update.$set)
+  
+  generator.$set(update.$set)
+  generator.$unset(update.$unset)
+  generator.$addToSet(update.$addToSet)
 
-  const script = mongoSetToScript($set as Record<string, unknown>)
+  const script = generator.build()
+
   const esQuery = mongoConditionToQuery($query as Record<string, unknown>)
 
   let _id =  conditions['_id']
@@ -66,9 +73,9 @@ export function postUpdate(query: Query<unknown, unknown>, doc: MongoosasticDocu
     _id = options.idMapper(unflatten(conditions))
   }
 
-  // $addToSet ($each) TODO
+  // $addToSet ($each) OK
   // $push : TODO
-  // $unset : TODO
+  // $unset : OK
   // test with upsert // $setOnInsert
   // $exists (with lt, gt, etc?), $ne, $or : YES
 

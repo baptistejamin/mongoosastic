@@ -176,7 +176,7 @@ describe('updates', function () {
 
     await config.sleep(config.BULK_ACTION_TIMEOUT)
 
-    await MessageWithMeta.update({
+    await MessageWithMeta.updateOne({
       messageId: '2',
       tenantId: 'b',
     }, {
@@ -286,88 +286,94 @@ describe('mongo to elastic queries', function() {
 
 
 describe('mongo to elastic updates', function() {
-  it('simple $set', function() {
-    const _query = mongoConditionToQuery({
-      article_id : {
-        $in : ['a', 'b', 'c']
-      }
-    })
+  it('$set', function() {
+    const generator = new ConversionGenerator()
 
-    expect(_query).toEqual({
-      bool:{
-        filter:[{
-          terms:{
-            article_id:[
-              'a','b','c'
-            ]
-          }
+    generator.$set({
+      'a.b.c' : true,
+      'd.e-f' : true,
+      d : {
+        e : {
+          value: true
         }
-        ]
-      }})
-  })
-
-  it('$in with $nin', function() {
-    const _query = mongoConditionToQuery({
-      article_id : {
-        $in : ['a', 'b', 'c'],
-        $nin : ['c']
-      }
+      },
+      f: [{
+        key: 'value'
+      }]
     })
 
-    expect(_query).toEqual({
-      bool:{
-        filter:[{
-          terms:{
-            article_id:[
-              'a','b','c'
-            ]
-          }
-        }],
-        must_not: [{
-          terms:{
-            article_id:[
-              'c'
-            ]
-          }
-        }]
-      }})
-  })
+    const source = generator.build()
 
-  it('range', function() {
-    const _query = mongoConditionToQuery({
-      view_count : {
-        $lte : 1000,
-        $gte : 100
-      }
-    })
-
-    expect(_query).toEqual({
-      bool:{
-        filter:[{
-          range:{
-            gte:100,
-            lte:1000
+    expect(source).toEqual({
+      lang: 'painless',
+      source: 'if (ctx._source[\'d\'] == null) { ctx._source[\'d\'] = [:] } if (ctx._source[\'d\'][\'e\'] == null) { ctx._source[\'d\'][\'e\'] = [:] }ctx._source[\'a.b.c\'] = params[\'a.b.c\']; ctx._source[\'d.e-f\'] = params[\'d.e-f\']; ctx._source[\'d\'][\'e\'][\'value\'] = params[\'d\'][\'e\'][\'value\']; ctx._source[\'f\'] = params[\'f\'];',
+      params: {
+        a: {
+          b: {
+            c: true
+          } 
+        },
+        d: { 
+          'e-f': true,
+          e: {
+            value: true
           }
+        },
+        f: [{
+          key: 'value'
         }]
       }
     })
+  }),
+
+  it('$unset', function() {
+    const generator = new ConversionGenerator()
+
+    generator.$unset({
+      'a.b.c' : true,
+      'd.e_f' : true,
+      d : {
+        e : true
+      },
+      a: true
+    })
+
+    const source = generator.build()
+
+    expect(source).toEqual({
+      lang: 'painless',
+      source: 'ctx._source.remove(\'a\');if ( ctx._source[\'d\'] != null ) {ctx._source[\'d\'].remove(\'e_f\');} if ( ctx._source[\'d\'] != null ) {ctx._source[\'d\'].remove(\'e\');} ',
+      params: {}
+    })
   })
 
-  it('$ne filter', function() {
-    const _query = mongoConditionToQuery({
-      article_id : {
-        $ne : 'd'
-      }
+  it('$addToSet', function() {
+    const generator = new ConversionGenerator()
+
+    generator.$addToSet({
+      'meta.array_string': 'new_value',
+      'meta.array_string_each': {
+        $each: ['a', 'b']
+      },
+      'meta.array_string_multiple_values': ['a', 'b'],
+      'meta.array_object': {
+        key1: 'value1',
+        key2: 'value2'
+      },
+      'meta.array_object_multiple_values': [{
+        key1: 'value1'
+      }],
+      meta2: {
+        array_string_twice: 'new_value'
+      },
+      'meta3.test-2': {
+        array_string_twice: 'new_value'
+      },
+      'meta4.subkey.array_object_multiple_values': [{
+        key1: 'value1'
+      }]
     })
 
-    expect(_query).toEqual({
-      bool:{
-        must_not:[{
-          term: {
-            article_id: 'd'
-          }
-        }]
-      }
-    })
+    const source = generator.build()
   })
 })
