@@ -26,7 +26,12 @@ interface IMessageWithMeta extends MongoosasticDocument {
   }
 }
 
-// -- Only index specific field
+interface IUser extends MongoosasticDocument {
+  name: string,
+  tags?: string[],
+  email?: string[],
+}
+
 const MessageSchema = new Schema({
   tenantId: {
     type: String
@@ -46,7 +51,6 @@ const MessageSchema = new Schema({
   }
 })
 
-// -- Only index specific field
 const MessageSchemaWithMeta = new Schema({
   tenantId: {
     type: String
@@ -65,6 +69,20 @@ const MessageSchemaWithMeta = new Schema({
       type: Boolean
     }
   }
+})
+
+const UserSchema = new Schema({
+  id: Number,
+  name: {
+    type: String
+  },
+  tags: [{
+    type: String
+  }],
+  emails
+  : [{
+    type: String
+  }]
 })
 
 MessageSchema.plugin(mongoosastic, {
@@ -91,13 +109,25 @@ MessageSchemaWithMeta.plugin(mongoosastic, {
 
 const MessageWithMeta = mongoose.model<IMessageWithMeta, MongoosasticModel<IMessageWithMeta>>('MessageWithMeta', MessageSchemaWithMeta)
 
+UserSchema.plugin(mongoosastic, {
+  idMapper: function (data: Record<string, unknown>) {
+    return `${data.id}`
+  },
+  bulk: {
+    size: 10, // preferred number of docs to bulk index
+    delay: 100 //milliseconds to wait for enough docs to meet size constraint
+  }
+})
+
+const User = mongoose.model<IUser, MongoosasticModel<IUser>>('User', UserSchema)
+
 // -- alright let's test this shiznit!
 describe('updates', function () {
   beforeAll(async function () {
     await mongoose.connect(config.mongoUrl)
 
-    await config.deleteDocs([Message])
-    await config.deleteIndexIfExists(['messages'])
+    await config.deleteDocs([Message, User])
+    await config.deleteIndexIfExists(['messages', 'users'])
 
     await config.createModelAndEnsureIndex(Tweet, {
       user: 'john',
@@ -110,8 +140,8 @@ describe('updates', function () {
   })
 
   afterAll(async function () {
-    await config.deleteDocs([Message])
-    await config.deleteIndexIfExists(['messages'])
+    await config.deleteDocs([Message, User])
+    await config.deleteIndexIfExists(['messages', 'users'])
     await mongoose.disconnect()
   })
 
@@ -194,6 +224,78 @@ describe('updates', function () {
     })
 
     expect(esMessage?.body.hits.hits[0]._source?.readAt).not.toEqual(null)
+  })
+
+  it('addToSet', async function () {
+    config.createModelAndEnsureIndex(User, {
+      id: 1,
+      name: 'John Doe'
+    })
+
+    await config.sleep(config.BULK_ACTION_TIMEOUT)
+
+    await User.updateOne({
+      id: 1
+    }, {
+      $set: {
+        name: 'James Bond'
+      },
+      $addToSet : {
+        'emails' : 'test@test.com'
+      }
+    })
+
+    await User.updateOne({
+      id: 1
+    }, {
+      $set: {
+        name: 'James Bond'
+      },
+      $addToSet : {
+        'emails' : {
+          $each : ['test@test.com', 'test2@test.com']
+        },
+        'tags' : ['a', 'b', 'c']
+      }
+    })
+
+    await config.sleep(config.BULK_ACTION_TIMEOUT)
+
+    const esUser = await User.search({
+      match: {
+        id : 1
+      }
+    })
+
+    console.log(esUser?.body.hits.hits[0]._source)
+  })
+
+  it('unset', async function () {
+    config.createModelAndEnsureIndex(User, {
+      id: 2,
+      name: 'John Doe'
+    })
+
+    await config.sleep(config.BULK_ACTION_TIMEOUT)
+
+    await User.updateOne({
+      id: 2
+    }, {
+      name: 'Mr Bean',
+      $addToSet : {
+        'tags' : ['a', 'b', 'c']
+      }
+    })
+
+    await config.sleep(config.BULK_ACTION_TIMEOUT)
+
+    const esUser = await User.search({
+      match: {
+        id : 2
+      }
+    })
+
+    console.log(esUser?.body.hits.hits[0]._source)
   })
 })
 

@@ -133,6 +133,8 @@ export default class ConversionGenerator {
 
         assertFields.push(match[i])
 
+        assertKey += currentMatch
+
         // a, then a.b, then a.b.c
         if (currentKey) {
           currentKey += '.'
@@ -152,7 +154,6 @@ export default class ConversionGenerator {
           condition += ' && '
         }
 
-        assertKey += currentMatch
         condition += ` ctx._source${assertKey} != null `
       }
 
@@ -181,7 +182,7 @@ export default class ConversionGenerator {
       if (addSetField.deduplicate) {
         source += `
           for (value in params['${addSetField.id}']) {
-            if (!ctx._source${addSetField.path}.containsKey(value.toString())) {
+            if (!ctx._source${addSetField.path}.contains(value)) {
               ctx._source${addSetField.path}.add(value)
             }
           }
