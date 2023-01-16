@@ -30,6 +30,7 @@ interface IUser extends MongoosasticDocument {
   name: string,
   tags?: string[],
   emails?: string[],
+  created_at: Date
 }
 
 const MessageSchema = new Schema({
@@ -79,10 +80,12 @@ const UserSchema = new Schema({
   tags: [{
     type: String
   }],
-  emails
-  : [{
+  emails: [{
     type: String
-  }]
+  }],
+  created_at: {
+    type: Date
+  }
 })
 
 MessageSchema.plugin(mongoosastic, {
@@ -245,6 +248,8 @@ describe('updates', function () {
       }
     })
 
+    await config.sleep(2000)
+
     await User.updateOne({
       id: 1
     }, {
@@ -255,6 +260,9 @@ describe('updates', function () {
         'emails' : 'test4@test.com'
       }
     })
+    
+
+    await config.sleep(2000)
 
     await User.updateOne({
       id: 1
@@ -329,6 +337,9 @@ describe('updates', function () {
       },
       $addToSet: {
         emails: 'bart@simpsons.com'
+      },
+      $setOnInsert: {
+        created_at: new Date('Mon Jan 16 2020 14:23:47 GMT+0100 (Central European Standard Time)')
       }
     }, {
       upsert: true
@@ -345,6 +356,7 @@ describe('updates', function () {
     expect(esUser?.body.hits.hits[0]._source?.name).toEqual('Bart')
     expect(esUser?.body.hits.hits[0]._source?.tags).toEqual(['a'])
     expect(esUser?.body.hits.hits[0]._source?.emails).toEqual(['bart@simpsons.com'])
+    expect(esUser?.body.hits.hits[0]._source?.created_at).toEqual('2020-01-16T13:23:47.000Z')
   })
 })
 
@@ -498,7 +510,7 @@ describe('mongo to elastic updates', function() {
     })
   })
 
-  it('$addToSet', function() {
+  it('addToSet', function() {
     const generator = new ConversionGenerator()
 
     generator.$addToSet({

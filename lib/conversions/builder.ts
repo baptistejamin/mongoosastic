@@ -50,6 +50,13 @@ export default class ConversionGenerator {
     this.sources.push(source)
   }
 
+  $setOnInsert(fieldsMap: Record<string, unknown> = {}) {
+    const _unflattenFields = unflatten(fieldsMap)
+
+    // Store unsertFields
+    merge(this.upsertFields, _unflattenFields)
+  }
+
   $unset(fieldsMap: Record<string, unknown> = {}) {
     const _fields : Record<string, unknown> = flatten(unflatten(fieldsMap), {
       safe: true,
@@ -167,13 +174,12 @@ export default class ConversionGenerator {
         id: uuidv4(),
         stack: [],
         path: assertKey,
-        deduplicate: false
+        deduplicate: true
       }
       
       if ((fieldsMap[keyToAdd] as  Record<string, unknown>).$each) {
         if (isArray((fieldsMap[keyToAdd] as  Record<string, unknown>).$each)) {
           newSet.stack = (fieldsMap[keyToAdd] as  Record<string, unknown>).$each as unknown[]
-          newSet.deduplicate = true
         }
       } else {
         newSet.stack = [(fieldsMap[keyToAdd] as  Record<string, unknown>)]
@@ -188,19 +194,13 @@ export default class ConversionGenerator {
     }
 
     addSetMap.forEach(addSetField => {
-      if (addSetField.deduplicate) {
-        source += `
-          for (value in params['${addSetField.id}']) {
-            if (!ctx._source${addSetField.path}.contains(value)) {
-              ctx._source${addSetField.path}.add(value)
-            }
+      source += `
+        for (value in params['${addSetField.id}']) {
+          if (!ctx._source${addSetField.path}.contains(value)) {
+            ctx._source${addSetField.path}.add(value)
           }
-        `
-      } else {
-        source += `
-          ctx._source${addSetField.path}.addAll(params['${addSetField.id}'])
-        `
-      }
+        }
+      `
     })
 
     this.assertFields =  this.assertFields.concat(brackets)

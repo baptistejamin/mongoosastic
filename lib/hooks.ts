@@ -2,7 +2,7 @@ import { Client } from '@elastic/elasticsearch'
 import { Query, UpdateQuery } from 'mongoose'
 import { MongoosasticDocument, MongoosasticModel, MongooseUpdateDocument, Options, BulkIndexOptions } from './types'
 import { flatten, unflatten } from 'flat'
-import { bulkAdd, bulkUpdate } from './bulking'
+import { bulkUpdate } from './bulking'
 import { mongoConditionToQuery, shouldUsePrimaryKey } from './utils'
 import ConversionGenerator from './conversions/builder'
 
@@ -53,13 +53,13 @@ export function postUpdate(query: Query<unknown, unknown>, doc: MongooseUpdateDo
   const update =  query.getUpdate() as UpdateQuery<unknown>
   const indexName = options.index || query.model.collection.collectionName
   const $query = flatten(conditions || {})
-  const queryOptions  = query.getOptions()
   
   const generator = new ConversionGenerator()
   
   generator.$set(update.$set)
   generator.$unset(update.$unset)
   generator.$addToSet(update.$addToSet)
+  generator.$setOnInsert(update.$setOnInsert)
 
   const script = generator.build()
 
