@@ -1,5 +1,5 @@
 import { flatten, unflatten } from 'flat'
-import { isArray, merge } from 'lodash'
+import { isArray, merge, set } from 'lodash'
 import { v4 as uuidv4 } from 'uuid'
 
 type PainlessScript = {
@@ -23,15 +23,21 @@ export default class ConversionGenerator {
   assertFields: string[] = []
   parameters: Record<string, unknown> = {}
   sources: string[] = []
+  upsertFields: Record<string, unknown> = {}
 
   $set(fieldsMap: Record<string, unknown> = {}) {
+    const _unflattenFields = unflatten(fieldsMap)
+
     const _fields : Record<string, unknown> = flatten(fieldsMap, {
       safe: true,
       transformKey: key => `['${key}']`,
     })
 
     // Store parameters
-    merge(this.parameters, unflatten(fieldsMap))
+    merge(this.parameters, _unflattenFields)
+
+    // Store unsertFields
+    merge(this.upsertFields, _unflattenFields)
 
     // Use bracket notation a.b.c => a['b]['c]
     const brackets = Object.keys(_fields).map(this.convertToBracketNotation)
@@ -87,7 +93,7 @@ export default class ConversionGenerator {
         if (condition) {
           source += `if (${condition}) {`
         }
-
+        
         // ctx._source['a']['b']['c'].remove('d')
         source += `ctx._source${assertKey}.remove('${keyToDelete}');`
 
@@ -173,6 +179,9 @@ export default class ConversionGenerator {
         newSet.stack = [(fieldsMap[keyToAdd] as  Record<string, unknown>)]
       }
 
+      // set key from upsert fields
+      set(this.upsertFields, keyToAdd, newSet.stack)
+
       addSetMap.set(keyToAdd, newSet)
   
       this.parameters[newSet.id] = newSet.stack
@@ -197,6 +206,10 @@ export default class ConversionGenerator {
     this.assertFields =  this.assertFields.concat(brackets)
 
     this.sources.push(source)
+  }
+
+  upsert () : Record<string, unknown> {
+    return this.upsertFields
   }
 
   build() : PainlessScript {

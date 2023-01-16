@@ -1,8 +1,8 @@
 import { Client } from '@elastic/elasticsearch'
 import { Query, UpdateQuery } from 'mongoose'
-import { MongoosasticDocument, MongoosasticModel, Options } from './types'
+import { MongoosasticDocument, MongoosasticModel, MongooseUpdateDocument, Options, BulkIndexOptions } from './types'
 import { flatten, unflatten } from 'flat'
-import { bulkUpdate } from './bulking'
+import { bulkAdd, bulkUpdate } from './bulking'
 import { mongoConditionToQuery, shouldUsePrimaryKey } from './utils'
 import ConversionGenerator from './conversions/builder'
 
@@ -48,16 +48,14 @@ export function postRemove(doc: MongoosasticDocument): void {
   doc.unIndex()
 }
 
-export function postUpdate(query: Query<unknown, unknown>, doc: MongoosasticDocument, options: Options, client: Client): void {
-  const generator = new ConversionGenerator()
-
+export function postUpdate(query: Query<unknown, unknown>, doc: MongooseUpdateDocument, options: Options, client: Client): void {
   const conditions = query.getFilter()
-
   const update =  query.getUpdate() as UpdateQuery<unknown>
-
   const indexName = options.index || query.model.collection.collectionName
-
   const $query = flatten(conditions || {})
+  const queryOptions  = query.getOptions()
+  
+  const generator = new ConversionGenerator()
   
   generator.$set(update.$set)
   generator.$unset(update.$unset)
@@ -73,23 +71,32 @@ export function postUpdate(query: Query<unknown, unknown>, doc: MongoosasticDocu
     _id = options.idMapper(unflatten(conditions))
   }
 
-  // $push : TODO
-  // test with upsert // $setOnInsert
+  // Create a new document if upsert option os present
 
-  // Extra conditions on query
-
-  if (options.bulk && shouldUsePrimaryKey(conditions) && _id) {
+  if (options.bulk && shouldUsePrimaryKey(conditions) && _id && (doc.modifiedCount == 1 || (doc.upsertedId && doc.upsertedCount == 1))) {
     const opt = {
       index: indexName,
       id: _id,
-      body: {
-        script: script
-      },
+      body: {},
       bulk: options.bulk
     }
 
+    if (doc.upsertedCount) {
+      opt.body = {
+        upsert: generator.upsert(),
+        script: {
+          lang: 'painless',
+          source: ''
+        }
+      }
+    } else {
+      opt.body  = {
+        script: script
+      }   
+    }
+
     bulkUpdate({ model: query.model as MongoosasticModel<MongoosasticDocument>, ...opt })
-  } else {
+  } {
     client.updateByQuery({
       index: indexName,
       body: {

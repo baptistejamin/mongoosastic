@@ -156,6 +156,15 @@ declare interface MongoosasticDocument<TDocument = any> extends Document<TDocume
   unIndex(): Promise<MongoosasticDocument>;
 }
 
+declare interface MongooseUpdateDocument extends MongoosasticDocument {
+  acknowledged: boolean,
+  upsertedId?: string,
+  modifiedCount: number,
+  upsertedCount: number,
+  matchedCount: number
+}
+
+
 interface MongoosasticModel<T> extends Model<T> {
   bulkError(): EventEmitter;
 
@@ -198,5 +207,6 @@ export {
   MongoosasticModel,
   Options,
   SynchronizeOptions,
-  SchemaWithInternals
+  SchemaWithInternals,
+  MongooseUpdateDocument
 }

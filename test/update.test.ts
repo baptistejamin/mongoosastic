@@ -293,7 +293,7 @@ describe('updates', function () {
     await config.sleep(2000)
 
     await User.updateOne({
-      id: 2
+      id: 3
     }, {
       name: 'Mr Burns',
       $unset : {
@@ -310,6 +310,41 @@ describe('updates', function () {
     })
 
     expect(esUser?.body.hits.hits[0]._source?.tags).not.toEqual(null)
+  })
+
+  it('upsert', async function () {
+    config.createModelAndEnsureIndex(User, {
+      id: 3,
+      name: 'John Doe'
+    })
+
+    await config.sleep(2000)
+
+    await User.updateOne({
+      id: 4
+    }, {
+      $set: {
+        name: 'Bart',
+        tags: ['a']
+      },
+      $addToSet: {
+        emails: 'bart@simpsons.com'
+      }
+    }, {
+      upsert: true
+    })
+
+    await config.sleep(2000)
+
+    const esUser = await User.search({
+      match: {
+        _id : 4
+      }
+    })
+
+    expect(esUser?.body.hits.hits[0]._source?.name).toEqual('Bart')
+    expect(esUser?.body.hits.hits[0]._source?.tags).toEqual(['a'])
+    expect(esUser?.body.hits.hits[0]._source?.emails).toEqual(['bart@simpsons.com'])
   })
 })
 
