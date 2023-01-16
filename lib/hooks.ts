@@ -1,6 +1,6 @@
 import { Client } from '@elastic/elasticsearch'
 import { Query, UpdateQuery } from 'mongoose'
-import { MongoosasticDocument, MongoosasticModel, MongooseUpdateDocument, Options, BulkIndexOptions } from './types'
+import { MongoosasticDocument, MongoosasticModel, MongooseUpdateDocument, Options } from './types'
 import { flatten, unflatten } from 'flat'
 import { bulkUpdate } from './bulking'
 import { mongoConditionToQuery, shouldUsePrimaryKey } from './utils'
