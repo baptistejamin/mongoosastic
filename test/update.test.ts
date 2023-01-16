@@ -29,7 +29,7 @@ interface IMessageWithMeta extends MongoosasticDocument {
 interface IUser extends MongoosasticDocument {
   name: string,
   tags?: string[],
-  email?: string[],
+  emails?: string[],
 }
 
 const MessageSchema = new Schema({
@@ -232,7 +232,7 @@ describe('updates', function () {
       name: 'John Doe'
     })
 
-    await config.sleep(config.BULK_ACTION_TIMEOUT)
+    await config.sleep(2000)
 
     await User.updateOne({
       id: 1
@@ -241,7 +241,7 @@ describe('updates', function () {
         name: 'James Bond'
       },
       $addToSet : {
-        'emails' : 'test@test.com'
+        'emails' : 'test1@test.com'
       }
     })
 
@@ -252,14 +252,25 @@ describe('updates', function () {
         name: 'James Bond'
       },
       $addToSet : {
+        'emails' : 'test4@test.com'
+      }
+    })
+
+    await User.updateOne({
+      id: 1
+    }, {
+      $set: {
+        name: 'Elon Musk'
+      },
+      $addToSet : {
         'emails' : {
-          $each : ['test@test.com', 'test2@test.com']
+          $each : ['test1@test.com', 'test2@test.com', 'test3@test.com']
         },
         'tags' : ['a', 'b', 'c']
       }
     })
 
-    await config.sleep(config.BULK_ACTION_TIMEOUT)
+    await config.sleep(2000)
 
     const esUser = await User.search({
       match: {
@@ -267,27 +278,30 @@ describe('updates', function () {
       }
     })
 
-    console.log(esUser?.body.hits.hits[0]._source)
+    expect(esUser?.body.hits.hits[0]._source?.name).toEqual('Elon Musk')
+    expect(esUser?.body.hits.hits[0]._source?.tags).toEqual(['a', 'b', 'c'])
+    expect(esUser?.body.hits.hits[0]._source?.emails).toEqual(['test1@test.com', 'test4@test.com', 'test2@test.com', 'test3@test.com'])
   })
 
   it('unset', async function () {
     config.createModelAndEnsureIndex(User, {
       id: 2,
-      name: 'John Doe'
+      name: 'John Doe',
+      tags: ['a', 'b', 'c']
     })
 
-    await config.sleep(config.BULK_ACTION_TIMEOUT)
+    await config.sleep(2000)
 
     await User.updateOne({
       id: 2
     }, {
-      name: 'Mr Bean',
-      $addToSet : {
-        'tags' : ['a', 'b', 'c']
+      name: 'Mr Burns',
+      $unset : {
+        tags : true
       }
     })
 
-    await config.sleep(config.BULK_ACTION_TIMEOUT)
+    await config.sleep(2000)
 
     const esUser = await User.search({
       match: {
@@ -295,7 +309,7 @@ describe('updates', function () {
       }
     })
 
-    console.log(esUser?.body.hits.hits[0]._source)
+    expect(esUser?.body.hits.hits[0]._source?.tags).not.toEqual(null)
   })
 })
 

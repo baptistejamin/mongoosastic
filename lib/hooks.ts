@@ -73,11 +73,8 @@ export function postUpdate(query: Query<unknown, unknown>, doc: MongoosasticDocu
     _id = options.idMapper(unflatten(conditions))
   }
 
-  // $addToSet ($each) OK
   // $push : TODO
-  // $unset : OK
   // test with upsert // $setOnInsert
-  // $exists (with lt, gt, etc?), $ne, $or : YES
 
   // Extra conditions on query
 
