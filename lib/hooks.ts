@@ -96,9 +96,11 @@ export function postUpdate(query: Query<unknown, unknown>, doc: MongooseUpdateDo
     }
 
     bulkUpdate({ model: query.model as MongoosasticModel<MongoosasticDocument>, ...opt })
-  } {
+  } else {
     client.updateByQuery({
       index: indexName,
+      scroll_size: doc.modifiedCount,
+      wait_for_completion: false,
       body: {
         query: esQuery,
         script: script,
