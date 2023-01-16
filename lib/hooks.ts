@@ -52,7 +52,7 @@ export function postUpdate(query: Query<unknown, unknown>, doc: MongooseUpdateDo
   const conditions = query.getFilter()
   const update =  query.getUpdate() as UpdateQuery<unknown>
   const indexName = options.index || query.model.collection.collectionName
-  const $query = flatten(conditions || {})
+  const $query = conditions || {} as Record<string, unknown>
   
   const generator = new ConversionGenerator()
   
@@ -63,7 +63,7 @@ export function postUpdate(query: Query<unknown, unknown>, doc: MongooseUpdateDo
 
   const script = generator.build()
 
-  const esQuery = mongoConditionToQuery($query as Record<string, unknown>)
+  const esQuery = mongoConditionToQuery($query)
 
   let _id =  conditions['_id']
 

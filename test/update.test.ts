@@ -420,8 +420,10 @@ describe('mongo to elastic queries', function() {
       bool:{
         filter:[{
           range:{
-            gte:100,
-            lte:1000
+            view_count : {
+              gte:100,
+              lte:1000
+            }
           }
         }]
       }

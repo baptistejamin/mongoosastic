@@ -259,22 +259,24 @@ export function mongoConditionToQuery($condition: Record<string, unknown>) : obj
     }
 
     if (currentCondition['$gte'] || currentCondition['$gt'] || currentCondition['$lt']  || currentCondition['$lte']) {
-      const range : Record<string, unknown> = {}
+      const range : Record<string, Record<string, unknown>> = {}
+
+      range[key]  = {}
 
       if (currentCondition['$gte']) {
-        range['gte'] = currentCondition['$gte']
+        range[key]['gte'] = currentCondition['$gte']
       }
 
       if (currentCondition['$gt']) {
-        range['gt'] =currentCondition['$gt']
+        range[key]['gt'] = currentCondition['$gt']
       }
 
       if (currentCondition['$lte']) {
-        range['lte'] = currentCondition['$lte']
+        range[key]['lte'] = currentCondition['$lte']
       }
 
       if (currentCondition['$lt']) {
-        range['lt'] = currentCondition['$lt']
+        range[key]['lt'] = currentCondition['$lt']
       }
 
       filter.push({
