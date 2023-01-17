@@ -1,7 +1,7 @@
 import { Client } from '@elastic/elasticsearch'
 import { Query, UpdateQuery } from 'mongoose'
 import { MongoosasticDocument, MongoosasticModel, MongooseUpdateDocument, Options } from './types'
-import { flatten, unflatten } from 'flat'
+import { unflatten } from 'flat'
 import { bulkUpdate } from './bulking'
 import { mongoConditionToQuery, shouldUsePrimaryKey } from './utils'
 import ConversionGenerator from './conversions/builder'
@@ -72,8 +72,14 @@ export function postUpdate(query: Query<unknown, unknown>, doc: MongooseUpdateDo
   }
 
   // Create a new document if upsert option os present
+  const modifiedCount = doc.nModified || doc.modifiedCount || 0
+  const upsertedCount = doc.upserted?.length || doc.upsertedCount
 
-  if (options.bulk && shouldUsePrimaryKey(conditions) && _id && (doc.modifiedCount == 1 || (doc.upsertedId && doc.upsertedCount == 1))) {
+  if (!modifiedCount && !upsertedCount) {
+    return
+  }
+
+  if (options.bulk && shouldUsePrimaryKey(conditions) && _id && (modifiedCount == 1 || (upsertedCount == 1))) {
     const opt = {
       index: indexName,
       id: _id,
@@ -81,7 +87,7 @@ export function postUpdate(query: Query<unknown, unknown>, doc: MongooseUpdateDo
       bulk: options.bulk
     }
 
-    if (doc.upsertedCount) {
+    if (upsertedCount) {
       opt.body = {
         upsert: generator.upsert(),
         script: {
