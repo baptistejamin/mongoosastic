@@ -28,7 +28,7 @@ export default class ConversionGenerator {
   $set(fieldsMap: Record<string, unknown> = {}) {
     const _unflattenFields = unflatten(fieldsMap)
 
-    const _fields : Record<string, unknown> = flatten(fieldsMap, {
+    const _fields : Record<string, unknown> = flatten(_unflattenFields, {
       safe: true,
       transformKey: key => `['${key}']`,
     })
