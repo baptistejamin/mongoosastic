@@ -471,7 +471,7 @@ describe('mongo to elastic updates', function() {
 
     expect(source).toEqual({
       lang: 'painless',
-      source: 'if (ctx._source[\'d\'] == null) { ctx._source[\'d\'] = [:] } if (ctx._source[\'d\'][\'e\'] == null) { ctx._source[\'d\'][\'e\'] = [:] }ctx._source[\'a.b.c\'] = params[\'a.b.c\']; ctx._source[\'d.e-f\'] = params[\'d.e-f\']; ctx._source[\'d\'][\'e\'][\'value\'] = params[\'d\'][\'e\'][\'value\']; ctx._source[\'f\'] = params[\'f\'];',
+      source: 'if (ctx._source[\'a\'] == null) { ctx._source[\'a\'] = [:] } if (ctx._source[\'a\'][\'b\'] == null) { ctx._source[\'a\'][\'b\'] = [:] } if (ctx._source[\'d\'] == null) { ctx._source[\'d\'] = [:] } if (ctx._source[\'d\'] == null) { ctx._source[\'d\'] = [:] } if (ctx._source[\'d\'][\'e\'] == null) { ctx._source[\'d\'][\'e\'] = [:] }ctx._source[\'a\'][\'b\'][\'c\'] = params[\'a\'][\'b\'][\'c\']; ctx._source[\'d\'][\'e-f\'] = params[\'d\'][\'e-f\']; ctx._source[\'d\'][\'e\'][\'value\'] = params[\'d\'][\'e\'][\'value\']; ctx._source[\'f\'] = params[\'f\'];',
       params: {
         a: {
           b: {
@@ -490,6 +490,19 @@ describe('mongo to elastic updates', function() {
       }
     })
   }),
+
+  it('set object', function() {
+    const generator = new ConversionGenerator()
+
+    generator.$set({
+      'a.b.c' : {
+        key: 'value'
+      }
+    })
+
+    const source = generator.build()
+  }),
+
 
   it('$unset', function() {
     const generator = new ConversionGenerator()
