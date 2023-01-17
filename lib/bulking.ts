@@ -36,7 +36,7 @@ function getStore(model: MongoosasticModel<MongoosasticDocument>) : BulkStoreVal
   return bulkStore.get($id)!!
 }
 
-//let PARRALEL_REQUESTS = 0
+let PARRALEL_REQUESTS = 0
 
 export async function bulkAdd(opts: BulkIndexOptions): Promise<void> {
   const instruction = [
@@ -100,19 +100,29 @@ export async function bulkIndex(
 }
 
 export async function flush(this: MongoosasticModel<MongoosasticDocument>): Promise<void> {
+  const start = Date.now()
   const store = getStore(this)
 
-  this.esClient()
+  //console.log(store.buffer)
+
+  PARRALEL_REQUESTS++
+
+  console.log('currenting having ' + PARRALEL_REQUESTS + ' requests')
+
+  this.esClient().child()
     .bulk({
       body: store.buffer,
       filter_path: 'took,items.**.error'
     })
     .then((res) => {
+      console.log('took '  + res.body.took + ' but real is ' + (Date.now() - start).toString())
+      PARRALEL_REQUESTS--
       if (res.body.items && res.body.items.length) {
         for (let i = 0; i < res.body.items.length; i++) {
           const info = res.body.items[i]
 
           if (info && info.update && info.update.error) {
+            console.log(info.update.error)
             this.bulkError().emit('error', null, info.update)
           }
 
@@ -127,6 +137,8 @@ export async function flush(this: MongoosasticModel<MongoosasticDocument>): Prom
       }
     })
     .catch((error) => {
+      PARRALEL_REQUESTS--
+      console.log('got an error', error)
       this.bulkError().emit('error', error, null)
     })
 
