@@ -161,7 +161,9 @@ declare interface MongooseUpdateDocument extends MongoosasticDocument {
   upsertedId?: string,
   modifiedCount: number,
   upsertedCount: number,
-  matchedCount: number
+  matchedCount: number,
+  nModified: number,
+  upserted?: Array<object>
 }
 
 
